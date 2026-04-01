@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-// 终极提取器：不管标题里面有没有加粗、斜体，强行提取出纯文本作为 ID
+// 终极纯文本提取器（处理各种嵌套标签，生成完美的目录书签锚点）
 function extractText(children: any): string {
   if (typeof children === 'string') return children;
   if (Array.isArray(children)) return children.map(extractText).join('');
@@ -35,27 +35,40 @@ export default function MarkdownRenderer({ content }: { content: string }) {
       components={{
         h2: ({node, children, ...props}) => <h2 id={generateId(children)} className="scroll-mt-28 font-semibold mt-12 mb-6 text-2xl border-b pb-2" {...props}>{children}</h2>,
         h3: ({node, children, ...props}) => <h3 id={generateId(children)} className="scroll-mt-28 font-medium mt-8 mb-4 text-xl" {...props}>{children}</h3>,
-        // 模仿 Notion 的行内代码块：灰底红字
-        code(props: any) {
-          const { children, className, node, ...rest } = props;
+        
+        // 🔥 核心修复 1：拦截所有的外层 <pre> 代码块（Block Code）
+        pre: ({ children, ...props }: any) => {
+          // 确保它是一个真正的代码块节点
+          const isCodeNode = children && children.type === 'code';
+          if (!isCodeNode) return <pre {...props}>{children}</pre>;
+
+          // 提取代码语言和代码原文
+          const { className, children: codeText } = children.props;
           const match = /language-(\w+)/.exec(className || '');
-          return match ? (
+          const language = match ? match[1] : 'text'; // 如果没写语言，强制变成纯文本模式！
+
+          return (
             <SyntaxHighlighter
               style={vscDarkPlus}
-              language={match[1]}
+              language={language}
               PreTag="div"
               className="rounded-lg shadow-sm my-6 text-sm !bg-[#1E1E1E]"
-              {...rest}
             >
-              {String(children).replace(/\n$/, '')}
+              {String(codeText).replace(/\n$/, '')}
             </SyntaxHighlighter>
-          ) : (
-            <code className={`${className} bg-[#F1F1F0] text-[#EB5757] px-1.5 py-0.5 rounded text-sm font-mono`} {...rest}>
+          );
+        },
+
+        // 🔥 核心修复 2：因为真正的代码块已经被 pre 拦截了，能走到这里的绝对只有“行内代码”（Inline Code）
+        code: ({ className, children, ...props }: any) => {
+          return (
+            <code className={`bg-[#F1F1F0] text-[#EB5757] px-1.5 py-0.5 rounded text-sm font-mono break-words ${className || ''}`} {...props}>
               {children}
             </code>
           );
         },
-        // 模仿 Notion 的引用块：左侧黑线，灰色字体
+
+        // Notion 风格的引用块
         blockquote: ({node, children, ...props}) => (
           <blockquote className="border-l-4 border-gray-800 bg-gray-50 pl-4 py-1 my-6 text-gray-600 italic rounded-r-lg" {...props}>
             {children}
