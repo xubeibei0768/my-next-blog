@@ -1,9 +1,7 @@
 import { Client } from "@notionhq/client";
 import { NotionToMarkdown } from "notion-to-md";
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import ReactMarkdown from "react-markdown";
 import Link from "next/link";
+import MarkdownRenderer from "./MarkdownRenderer"; // 引入刚才写的客户端渲染器
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const n2m = new NotionToMarkdown({ notionClient: notion });
@@ -19,53 +17,27 @@ async function getPostContent(id: string) {
   }
 }
 
-function CodeBlock({ node, inline, className, children, ...props }: any) {
-  const match = /language-(\w+)/.exec(className || '');
-  return !inline && match ? (
-    <SyntaxHighlighter
-      style={vscDarkPlus}
-      language={match[1]}
-      PreTag="div"
-      className="rounded-xl shadow-xl my-6 text-sm"
-      {...props}
-    >
-      {String(children).replace(/\n$/, '')}
-    </SyntaxHighlighter>
-  ) : (
-    <code className={`${className} bg-muted text-foreground px-1.5 py-0.5 rounded-md text-sm font-mono`} {...props}>
-      {children}
-    </code>
-  );
-}
-
 export default async function PostDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const content = await getPostContent(id);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-card">
+    <div className="min-h-screen">
+      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="container max-w-7xl mx-auto flex h-16 items-center px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 font-mono text-lg font-bold text-foreground">
-            <div className="size-7 rounded-full bg-foreground text-background flex items-center justify-center text-sm">X</div>
+          <Link href="/" className="flex items-center gap-2 font-mono text-lg font-bold text-gray-900 hover:opacity-70 transition-opacity">
+            <div className="size-7 rounded bg-gray-900 text-white flex items-center justify-center text-sm">X</div>
             <span>Dev Log</span>
           </Link>
-          <Link href="/" className="ml-6 text-sm text-foreground/50 hover:text-foreground transition-colors">← 返回</Link>
+          <Link href="/" className="ml-6 text-sm text-gray-500 hover:text-gray-900 transition-colors">← 返回</Link>
         </div>
       </header>
 
       <main className="container max-w-3xl mx-auto px-4 sm:px-6 py-16 md:py-24">
-        {/* 关键修复：这里的 prose prose-invert 会强制在深色背景下把文字变白 */}
-        <article className="prose prose-invert prose-lg max-w-none">
-          <ReactMarkdown
-            components={{
-              code: CodeBlock,
-            }}
-          >
-            {content}
-          </ReactMarkdown>
+        {/* 把样式约束交回给 prose，内部渲染交给安全组件 */}
+        <article className="prose prose-slate prose-lg max-w-none">
+          <MarkdownRenderer content={content} />
         </article>
-        
         <div className="h-32"></div>
       </main>
     </div>

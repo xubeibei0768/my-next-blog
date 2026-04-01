@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import InteractiveBackground from "./InteractiveBackground"; // 引入我们刚才写的高级交互背景
 
 const inter = Inter({ subsets: ["latin"] });
 
-// 魔法在这里：这里定义了你网页标签栏的名字和描述
 export const metadata: Metadata = {
   title: "Xubeibei's Dev Log",
   description: "Sensing the World // C++ & Algorithms",
@@ -17,7 +17,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh">
-      <body className={inter.className}>{children}</body>
+      {/* 给 body 加上 relative，确保层级正确 */}
+      <body className={`${inter.className} relative`}>
+        <InteractiveBackground />
+        <div className="relative z-10">
+          {children}
+        </div>
+      </body>
     </html>
   );
 }
