@@ -1,12 +1,44 @@
 import { Client } from "@notionhq/client";
 import { NotionToMarkdown } from "notion-to-md";
 import Link from "next/link";
-// 恢复普通的 import，不惹 Next.js 生气
-import MarkdownRenderer from "./MarkdownRenderer"; 
+import MarkdownRenderer from "./MarkdownRenderer";
 
+// 1. 初始化 Notion
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const n2m = new NotionToMarkdown({ notionClient: notion });
 
+// 🔥 终极魔法 1：开启 ISR 缓存！每 60 秒才允许后台偷偷去 Notion 检查一次更新
+export const revalidate = 60;
+
+// 🔥 终极魔法 2：静态路由生成 (SSG)。在 Vercel 打包时，提前把所有文章 ID 找出来，提前生成静态网页！
+export async function generateStaticParams() {
+  const res = await fetch(`https://api.notion.com/v1/databases/${process.env.NOTION_DATABASE_ID}/query`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      filter: {
+        and: [
+          { property: "status", select: { equals: "Published" } },
+          { property: "type", select: { equals: "Post" } }
+        ]
+      }
+    }),
+  });
+
+  if (!res.ok) return [];
+  const data = await res.json();
+  
+  // 告诉 Next.js 提前打包这些文章
+  return data.results.map((post: any) => ({
+    id: post.id,
+  }));
+}
+
+// 3. 拉取文章详情
 async function getPostContent(id: string) {
   try {
     const mdblocks = await n2m.pageToMarkdown(id);
@@ -18,6 +50,7 @@ async function getPostContent(id: string) {
   }
 }
 
+// 4. 页面主体
 export default async function PostDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const content = await getPostContent(id); 
@@ -36,7 +69,6 @@ export default async function PostDetail({ params }: { params: Promise<{ id: str
 
       <main className="container max-w-3xl mx-auto px-4 sm:px-6 py-16 md:py-24 relative z-10">
         <article className="prose prose-slate prose-lg max-w-none">
-          {/* 直接把数据塞给它，拦截魔法我们在组件内部做 */}
           <MarkdownRenderer content={content} />
         </article>
         <div className="h-32"></div>
