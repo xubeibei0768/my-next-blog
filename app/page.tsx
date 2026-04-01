@@ -24,7 +24,6 @@ async function getPosts() {
   return data.results;
 }
 
-// 头部：干净通透
 function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md">
@@ -38,12 +37,11 @@ function Header() {
   );
 }
 
-// 简介区：专业极简
 function Bio() {
   return (
-    <div className="container max-w-7xl mx-auto px-4 sm:px-6 py-20 relative">
+    <div className="container max-w-7xl mx-auto px-4 sm:px-6 py-20 relative z-10">
       <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-10">
-        <div className="size-24 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-4xl">💻</div>
+        <div className="size-24 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-4xl shrink-0">💻</div>
         <div className="flex-1">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900">Xubeibei's Dev Log</h1>
           <p className="mt-4 text-lg text-gray-600 max-w-2xl leading-relaxed">
@@ -61,15 +59,14 @@ function Bio() {
   );
 }
 
-// 卡片：苹果风微阴影
 function PostCard({ post }: { post: any }) {
   const titleProp = post.properties.Name || post.properties.title;
   const title = titleProp?.title?.[0]?.plain_text || "无标题文章";
   const date = post.created_time ? new Date(post.created_time).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : "";
   
   return (
-    <Link href={`/post/${post.id}`}>
-      <article className="group p-8 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between">
+    <Link href={`/post/${post.id}`} className="block h-full">
+      <article className="group p-8 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between relative z-10">
         <h2 className="text-2xl font-bold tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">
           {title}
         </h2>
@@ -86,12 +83,13 @@ export default async function Home() {
   const posts = await getPosts();
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
       <Header />
       <Bio />
-      <main className="container max-w-7xl mx-auto px-4 sm:px-6 pb-24">
+      <main className="container max-w-7xl mx-auto px-4 sm:px-6 pb-24 relative z-10">
         <div className="border-t border-gray-200 pt-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+          {/* 关键修复：这里的 grid 和 col-span 保证了卡片绝对不会重叠 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
             {posts.map((post: any) => (
               <PostCard key={post.id} post={post} />
             ))}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import InteractiveBackground from "./InteractiveBackground"; // 引入我们刚才写的高级交互背景
+import InteractiveBackground from "./InteractiveBackground";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh">
-      {/* 给 body 加上 relative，确保层级正确 */}
+    // 关键修复：加上 scroll-smooth，书签跳转就会像幻灯片一样丝滑滑动，而不是生硬地闪现
+    <html lang="zh" className="scroll-smooth">
       <body className={`${inter.className} relative`}>
         <InteractiveBackground />
         <div className="relative z-10">
