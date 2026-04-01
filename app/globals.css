@@ -3,20 +3,23 @@
 
 @layer base {
   :root {
-    /* 核心色谱：使用中性灰，拒绝纯黑纯白，显得更高级 */
-    --background: 0 0% 98%;    /* #fafafa - 高级背景灰 */
-    --foreground: 240 10% 10%; /* #1a1a1c - 几乎纯黑的深灰 */
-    
-    /* 所有的边框、卡片背景、悬浮色都用这一个，保证视觉统一 */
-    --border: 240 6% 90%;      /* #e4e4e7 */
-    --card: 0 0% 100%;        /* #ffffff */
-    --muted: 240 6% 96%;       /* #f4f4f5 */
+    /* 采用顶级 SaaS 网站最爱的深空灰调 */
+    --background: 240 10% 4%; 
+    --foreground: 0 0% 98%;   
+    --border: 240 5% 15%;
+    --card: 240 10% 6%;
+    --muted: 240 5% 15%;
   }
 
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: var(--font-inter); /* 假设你用了 Inter 字体，后面我们会把它引入 */
+    /* 高级感核心：绘制极细的微光网格背景 */
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
   }
 }
