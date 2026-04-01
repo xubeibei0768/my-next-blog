@@ -1,12 +1,13 @@
 import { Client } from "@notionhq/client";
 import { NotionToMarkdown } from "notion-to-md";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ReactMarkdown from "react-markdown";
+import Link from "next/link";
 
-// 1. 初始化 Notion 客户端 和 转换器
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const n2m = new NotionToMarkdown({ notionClient: notion });
 
-// 2. 核心抓取函数：根据 ID 获取 Notion Blocks 并转成 Markdown
 async function getPostContent(id: string) {
   try {
     const mdblocks = await n2m.pageToMarkdown(id);
@@ -14,35 +15,59 @@ async function getPostContent(id: string) {
     return mdString.parent || "这篇文章似乎没有内容哦。";
   } catch (error) {
     console.error("抓取文章内容失败:", error);
-    return "获取文章内容失败，请检查网络或代理设置。";
+    return "获取文章内容失败，请检查网络或配置。";
   }
 }
 
-// 3. 页面组件 (注意 Next.js 15 中 params 是一个 Promise，需要 await)
+function CodeBlock({ node, inline, className, children, ...props }: any) {
+  const match = /language-(\w+)/.exec(className || '');
+  return !inline && match ? (
+    <SyntaxHighlighter
+      style={vscDarkPlus}
+      language={match[1]}
+      PreTag="div"
+      className="rounded-xl shadow-xl my-6 text-sm"
+      {...props}
+    >
+      {String(children).replace(/\n$/, '')}
+    </SyntaxHighlighter>
+  ) : (
+    <code className={`${className} bg-muted text-foreground px-1.5 py-0.5 rounded-md text-sm font-mono`} {...props}>
+      {children}
+    </code>
+  );
+}
+
 export default async function PostDetail({ params }: { params: Promise<{ id: string }> }) {
-  // 解析出路由中的 ID
   const { id } = await params;
-  
-  // 拉取文章 Markdown 内容
   const content = await getPostContent(id);
 
   return (
-    <main className="max-w-3xl mx-auto mt-20 p-6">
-      {/* 顶部的返回按钮 */}
-      <a href="/" className="text-gray-500 hover:text-gray-900 transition-colors mb-10 inline-block font-mono text-sm">
-        ← 返回博客首页
-      </a>
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-border bg-card">
+        <div className="container max-w-7xl mx-auto flex h-16 items-center px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2 font-mono text-lg font-bold text-foreground">
+            <div className="size-7 rounded-full bg-foreground text-background flex items-center justify-center text-sm">X</div>
+            <span>Dev Log</span>
+          </Link>
+          <Link href="/" className="ml-6 text-sm text-foreground/50 hover:text-foreground transition-colors">← 返回</Link>
+        </div>
+      </header>
 
-      {/* 核心排版区：
-        这里的 prose prose-lg 就是 @tailwindcss/typography 提供的魔法类名
-        它会自动把里面的 h1, h2, p, code 排版得极其优雅 
-      */}
-      <article className="prose prose-slate prose-lg max-w-none mt-8">
-        <ReactMarkdown>{content}</ReactMarkdown>
-      </article>
-      
-      {/* 底部留白 */}
-      <div className="h-32"></div>
-    </main>
+      <main className="container max-w-3xl mx-auto px-4 sm:px-6 py-16 md:py-24">
+        {/* 关键修复：这里的 prose prose-invert 会强制在深色背景下把文字变白 */}
+        <article className="prose prose-invert prose-lg max-w-none">
+          <ReactMarkdown
+            components={{
+              code: CodeBlock,
+            }}
+          >
+            {content}
+          </ReactMarkdown>
+        </article>
+        
+        <div className="h-32"></div>
+      </main>
+    </div>
   );
 }

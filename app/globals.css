@@ -1,27 +1,22 @@
 @import "tailwindcss";
-@plugin "@tailwindcss/typography"; /* 加入这行，开启排版魔法 */
+@plugin "@tailwindcss/typography";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* 核心色谱：使用中性灰，拒绝纯黑纯白，显得更高级 */
+    --background: 0 0% 98%;    /* #fafafa - 高级背景灰 */
+    --foreground: 240 10% 10%; /* #1a1a1c - 几乎纯黑的深灰 */
+    
+    /* 所有的边框、卡片背景、悬浮色都用这一个，保证视觉统一 */
+    --border: 240 6% 90%;      /* #e4e4e7 */
+    --card: 0 0% 100%;        /* #ffffff */
+    --muted: 240 6% 96%;       /* #f4f4f5 */
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-inter); /* 假设你用了 Inter 字体，后面我们会把它引入 */
+    -webkit-font-smoothing: antialiased;
+  }
 }
