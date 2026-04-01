@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography"; /* 加入这行，开启排版魔法 */
 
 :root {
   --background: #ffffff;
