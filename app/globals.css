@@ -3,18 +3,16 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;    /* #fafafa 高级感浅灰底色 */
-    --foreground: 240 10% 15%; /* #222225 极深灰（非纯黑，不刺眼） */
-    --border: 240 6% 90%;      /* #e4e4e7 柔和边框 */
-    --card: 0 0% 100%;         /* #ffffff 纯白卡片 */
+    --background: 0 0% 98%;    /* #fafafa */
+    --foreground: 240 10% 15%; /* #222225 */
+    --border: 240 6% 90%;      /* #e4e4e7 */
+    --card: 0 0% 100%;         /* #ffffff */
   }
 
   body {
-    background-color: #fafafa;
+    /* 彻底清理掉 background-image 静态底纹 */
+    background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    /* Stripe 风格的浅色网格点阵背景 */
-    background-image: radial-gradient(#d1d5db 1px, transparent 1px);
-    background-size: 24px 24px;
     -webkit-font-smoothing: antialiased;
   }
 }

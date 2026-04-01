@@ -2,15 +2,13 @@ import { Client } from "@notionhq/client";
 import { NotionToMarkdown } from "notion-to-md";
 import Link from "next/link";
 import MarkdownRenderer from "./MarkdownRenderer";
+import ArticleSidebar from "./ArticleSidebar"; // 引入刚才写的侧边栏组件
 
-// 1. 初始化 Notion
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const n2m = new NotionToMarkdown({ notionClient: notion });
 
-// 🔥 终极魔法 1：开启 ISR 缓存！每 60 秒才允许后台偷偷去 Notion 检查一次更新
 export const revalidate = 60;
 
-// 🔥 终极魔法 2：静态路由生成 (SSG)。在 Vercel 打包时，提前把所有文章 ID 找出来，提前生成静态网页！
 export async function generateStaticParams() {
   const res = await fetch(`https://api.notion.com/v1/databases/${process.env.NOTION_DATABASE_ID}/query`, {
     method: 'POST',
@@ -28,51 +26,77 @@ export async function generateStaticParams() {
       }
     }),
   });
-
   if (!res.ok) return [];
   const data = await res.json();
-  
-  // 告诉 Next.js 提前打包这些文章
-  return data.results.map((post: any) => ({
-    id: post.id,
-  }));
+  return data.results.map((post: any) => ({ id: post.id }));
 }
 
-// 3. 拉取文章详情
 async function getPostContent(id: string) {
   try {
     const mdblocks = await n2m.pageToMarkdown(id);
-    const mdString = n2m.toMarkdownString(mdblocks);
-    return mdString.parent || "这篇文章似乎没有内容哦。";
+    return n2m.toMarkdownString(mdblocks).parent || "";
   } catch (error) {
-    console.error("抓取文章内容失败:", error);
     return "获取文章内容失败，请检查网络或配置。";
   }
 }
 
-// 4. 页面主体
+// 服务端正则：从 Markdown 原文中暴力提取 ## 和 ### 标题交给书签
+function extractHeadings(mdString: string) {
+  const regex = /^(##|###)\s+(.+)$/gm;
+  const headings = [];
+  let match;
+  while ((match = regex.exec(mdString)) !== null) {
+    const text = match[2];
+    headings.push({
+      level: match[1].length, 
+      text: text,
+      id: text.toLowerCase().replace(/\s+/g, '-') 
+    });
+  }
+  return headings;
+}
+
 export default async function PostDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const content = await getPostContent(id); 
+  const headings = extractHeadings(content); // 提取目录！
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+      {/* 1. 绝对置顶的毛玻璃导航栏 */}
+      <header className="fixed top-0 inset-x-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-md shadow-sm">
         <div className="container max-w-7xl mx-auto flex h-16 items-center px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-mono text-lg font-bold text-gray-900 hover:opacity-70 transition-opacity">
             <div className="size-7 rounded bg-gray-900 text-white flex items-center justify-center text-sm">X</div>
             <span>Dev Log</span>
           </Link>
-          <Link href="/" className="ml-6 text-sm text-gray-500 hover:text-gray-900 transition-colors">← 返回</Link>
+          <div className="ml-auto">
+             <Link href="/" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors px-4 py-2 rounded-lg hover:bg-gray-100">
+               ← 返回首页
+             </Link>
+          </div>
         </div>
       </header>
 
-      <main className="container max-w-3xl mx-auto px-4 sm:px-6 py-16 md:py-24 relative z-10">
-        <article className="prose prose-slate prose-lg max-w-none">
-          <MarkdownRenderer content={content} />
-        </article>
-        <div className="h-32"></div>
-      </main>
+      {/* 留出固定导航栏的高度 */}
+      <div className="pt-24 pb-32">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6">
+          {/* 大屏下采用左右两列布局 */}
+          <div className="flex flex-col lg:flex-row gap-12 items-start justify-center">
+            
+            {/* 2. 左侧：纯白高定底板 */}
+            <main className="flex-1 w-full max-w-3xl bg-white border border-gray-200 shadow-sm rounded-2xl p-8 md:p-12 relative z-10">
+              <article className="prose prose-slate prose-lg max-w-none">
+                <MarkdownRenderer content={content} />
+              </article>
+            </main>
+
+            {/* 3. 右侧：智能悬浮书签 */}
+            <ArticleSidebar headings={headings} />
+
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
