@@ -16,38 +16,36 @@ export default function InteractiveBackground() {
     let mouseX = -1000;
     let mouseY = -1000;
     let clickRipple: { x: number, y: number, radius: number } | null = null;
+    let canvasWidth = 0;
+    let canvasHeight = 0;
 
-    // 1. 设置 Canvas 尺寸并处理 Retina 屏幕
+    // 1. 核心修复：用真实的容器尺寸，彻底避开“滚动条压缩”的坑
     const resize = () => {
+      // 获取 Canvas 元素在屏幕上的真实物理边界
+      const rect = canvas.getBoundingClientRect();
       const ratio = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * ratio;
-      canvas.height = window.innerHeight * ratio;
+      
+      canvasWidth = rect.width;
+      canvasHeight = rect.height;
+
+      // 让画布的高清像素 100% 吻合屏幕的显示像素
+      canvas.width = canvasWidth * ratio;
+      canvas.height = canvasHeight * ratio;
+      
       ctx.scale(ratio, ratio);
-      initParticles(); // 窗口大小改变后重新初始化粒子
+      initParticles(); 
     };
 
-    // 2. 粒子类：定义粒子的属性和物理行为
+    // 2. 粒子类
     class Particle {
-      x: number;
-      y: number;
-      size: number;
-      baseX: number;
-      baseY: number;
-      color: string;
-      originalColor: string;
-      velocityX: number;
-      velocityY: number;
+      x: number; y: number; size: number; baseX: number; baseY: number;
+      color: string; originalColor: string; velocityX: number; velocityY: number;
 
       constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-        this.size = 1.5; // 粒子大小
-        this.baseX = x; // 记录粒子的原始网格位置
-        this.baseY = y;
-        // 采用通透的蓝色调
+        this.x = x; this.y = y; this.size = 1.5;
+        this.baseX = x; this.baseY = y;
         this.color = 'rgba(59, 130, 246, 0.15)'; 
         this.originalColor = this.color;
-        // 粒子自身有微小的漂移
         this.velocityX = (Math.random() - 0.5) * 0.2; 
         this.velocityY = (Math.random() - 0.5) * 0.2;
       }
@@ -61,49 +59,42 @@ export default function InteractiveBackground() {
       }
 
       update() {
-        // --- 核心物理交互 ---
-
-        // A. 粒子自身漂移与边界处理
         this.x += this.velocityX;
         this.y += this.velocityY;
-        if (this.x > window.innerWidth || this.x < 0) this.velocityX *= -1;
-        if (this.y > window.innerHeight || this.y < 0) this.velocityY *= -1;
+        if (this.x > canvasWidth || this.x < 0) this.velocityX *= -1;
+        if (this.y > canvasHeight || this.y < 0) this.velocityY *= -1;
 
-        // B. 鼠标排斥特效 (Repulsion)
         let dx = mouseX - this.x;
         let dy = mouseY - this.y;
         let distance = Math.sqrt(dx * dx + dy * dy);
-        const maxRepulseDistance = 150; // 鼠标影响范围
+        const maxRepulseDistance = 150; 
 
         if (distance < maxRepulseDistance) {
-          // 距离越近，排斥力越大
           let forceFactor = (maxRepulseDistance - distance) / maxRepulseDistance;
           let forceX = dx / distance * forceFactor * 10; 
           let forceY = dy / distance * forceFactor * 10;
           this.x -= forceX;
           this.y -= forceY;
-          this.color = `rgba(59, 130, 246, ${0.15 + forceFactor * 0.6})`; // 鼠标靠近时粒子变亮
+          this.color = `rgba(59, 130, 246, ${0.15 + forceFactor * 0.6})`; 
         } else {
-          // C. 归位特效 (Homing)：鼠标离开后，粒子缓慢回到原始网格位置
           if (this.x !== this.baseX || this.y !== this.baseY) {
-            this.x += (this.baseX - this.x) * 0.05; // 0.05 是归位的弹性系数
+            this.x += (this.baseX - this.x) * 0.05; 
             this.y += (this.baseY - this.y) * 0.05;
           }
           this.color = this.originalColor;
         }
 
-        // D. 点击涟漪特效 (Ripple)
         if (clickRipple) {
           let cdx = clickRipple.x - this.x;
           let cdy = clickRipple.y - this.y;
           let cDistance = Math.sqrt(cdx * cdx + cdy * cdy);
-          const rippleWidth = 10; // 涟漪宽度
+          const rippleWidth = 10;
 
           if (cDistance < clickRipple.radius && cDistance > clickRipple.radius - rippleWidth) {
             let rippleForceFactor = (rippleWidth - Math.abs(cDistance - (clickRipple.radius - rippleWidth/2))) / rippleWidth;
             let rippleForceX = cdx / cDistance * rippleForceFactor * 2;
             let rippleForceY = cdy / cDistance * rippleForceFactor * 2;
-            this.x += rippleForceX; // 点击时产生微小的吸引/排斥力
+            this.x += rippleForceX; 
             this.y += rippleForceY;
           }
         }
@@ -112,28 +103,26 @@ export default function InteractiveBackground() {
       }
     }
 
-    // 3. 初始化粒子点阵（Stripe 风格的 24px 点阵）
     const initParticles = () => {
       particles = [];
-      const gap = 24; // 网格间距
-      for (let y = 0; y < window.innerHeight; y += gap) {
-        for (let x = 0; x < window.innerWidth; x += gap) {
-          particles.push(new Particle(x + Math.random()*2, y + Math.random()*2)); // 加入微小随机，更自然
+      const gap = 24; 
+      for (let y = 0; y < canvasHeight; y += gap) {
+        for (let x = 0; x < canvasWidth; x += gap) {
+          particles.push(new Particle(x + Math.random()*2, y + Math.random()*2)); 
         }
       }
     };
 
-    // 4. 连线特效：如果粒子和鼠标距离近，则绘制一条微弱的连线
     const drawLines = (particle: Particle) => {
       if (!ctx) return;
       let dx = mouseX - particle.x;
       let dy = mouseY - particle.y;
       let distance = Math.sqrt(dx * dx + dy * dy);
-      const maxConnectDistance = 120; // 连线距离
+      const maxConnectDistance = 120; 
 
       if (distance < maxConnectDistance) {
         let opacity = 1 - (distance / maxConnectDistance);
-        ctx.strokeStyle = `rgba(59, 130, 246, ${opacity * 0.08})`; // 极淡的蓝色连线
+        ctx.strokeStyle = `rgba(59, 130, 246, ${opacity * 0.08})`; 
         ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.moveTo(particle.x, particle.y);
@@ -142,54 +131,53 @@ export default function InteractiveBackground() {
       }
     };
 
-    // 5. 点击涟漪更新逻辑
     const updateRipple = () => {
       if (clickRipple) {
-        clickRipple.radius += 5; // 涟漪扩散速度
-        if (clickRipple.radius > 200) { // 涟漪消失半径
-          clickRipple = null;
-        }
+        clickRipple.radius += 5; 
+        if (clickRipple.radius > 200) clickRipple = null;
       }
     };
 
-    // 6. 主动画循环 (Animation Loop)
     const animate = () => {
       if (!ctx) return;
-      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight); // 清空 Canvas
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight); 
 
       updateRipple();
 
       particles.forEach(particle => {
-        particle.update(); // 更新粒子位置并绘制
-        drawLines(particle); // 绘制连线
+        particle.update(); 
+        drawLines(particle); 
       });
 
-      animationFrameId = requestAnimationFrame(animate); // 循环调用
+      animationFrameId = requestAnimationFrame(animate); 
     };
 
-    // 7. 绑定交互事件
+    // 3. 核心修复：精准扣除画布在屏幕上的边距，拿到 100% 准确的鼠标坐标
     const handleMouseMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
     };
+    
     const handleMouseLeave = () => {
-      mouseX = -1000; // 鼠标离开后将光标藏起来
+      mouseX = -1000; 
       mouseY = -1000;
     };
+    
     const handleClick = (e: MouseEvent) => {
-      // 记录点击位置并启动涟漪
-      clickRipple = { x: e.clientX, y: e.clientY, radius: 0 };
+      const rect = canvas.getBoundingClientRect();
+      clickRipple = { x: e.clientX - rect.left, y: e.clientY - rect.top, radius: 0 };
     };
+
+    // 初始化运行
+    resize(); 
+    animate(); 
 
     window.addEventListener('resize', resize);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseleave', handleMouseLeave);
     window.addEventListener('click', handleClick);
 
-    resize(); // 初始化尺寸
-    animate(); // 启动动画
-
-    // 8. 清理机制：防止切换页面导致内存泄漏
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', resize);
@@ -202,7 +190,8 @@ export default function InteractiveBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="pointer-events-none fixed inset-0 z-0 bg-[#fafafa]"
+      // 加上 w-full h-full，让 Tailwind 严格锁死物理宽度，不给滚动条留余地
+      className="pointer-events-none fixed inset-0 z-0 w-full h-full bg-[#fafafa]"
     />
   );
 }
