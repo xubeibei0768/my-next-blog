@@ -16,3 +16,13 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+/* 🔥 终极修复：确保图片放大时处于全站最顶层 */
+.medium-zoom-overlay {
+  z-index: 99 !important; /* 遮罩层 z-index 设高 */
+}
+
+.medium-zoom-image--opened {
+  z-index: 100 !important; /* 被放大的图片 z-index 设到最高 */
+  /* 给放大的图片加一个大气的高级阴影，更有呼吸感 */
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from "react-markdown";
-// 🔥 这里把 vscDarkPlus（VSCode配色）换成了经典的 Tomorrow Night，它颜色更柔和，告别死亡紫红
-import { tomorrow } from 'react-syntax-highlighter/dist/cjs/styles/prism';
-import mediumZoom from 'medium-zoom'; // 🔥 新增插件导入
-import SyntaxCard from "./SyntaxCard"; // 🔥 引入我们刚刚写的神级代码组件！
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+// 🔥 降维打击魔法：我们换成了 Tomorrow Night 的 cjs (CommonJS) 配色，它能百分百在 Vercel 里生成静态样式，杜绝样式幽灵！
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import mediumZoom from 'medium-zoom'; 
+import { CopyToClipboard } from 'react-copy-to-clipboard'; // 安装好的复制插件
 
 // 提取目录锚点
 function extractText(children: any): string {
@@ -17,31 +18,75 @@ function extractText(children: any): string {
 
 const generateId = (children: any) => extractText(children).trim().replace(/\s+/g, '-').toLowerCase();
 
+// 🔥 定义一个局部的、极致干净的的代码块组件（带有悬浮复制键）
+const CleanCodeBlock = ({ language, value }: { language: string; value: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    // 🔥 极致干净的核心：这个 group 用于在鼠标悬浮时显示复制按钮
+    // 去掉所有边框和生硬的黑色大底板，采用扁平化设计
+    <div className="relative group my-8 rounded-lg overflow-hidden bg-[#1E1E1E] shadow-inner border border-gray-100/5">
+      
+      {/* 右上角：极度克制的语言标识 */}
+      <span className="absolute top-2 right-2 text-[10px] font-mono font-bold text-gray-600 uppercase tracking-wider z-10 select-none">
+        {language || 'text'}
+      </span>
+
+      {/* 🔥 大厂极客范：极致克制的悬浮复制键，默认隐藏（opacity-0），鼠标悬浮时出现 */}
+      <div className="absolute top-3 right-12 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+        <CopyToClipboard text={value} onCopy={handleCopy}>
+          <button className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all text-xs font-medium cursor-pointer ${copied ? 'bg-green-600 text-white' : 'bg-gray-700/60 text-gray-300 hover:bg-gray-700'}`}>
+            {copied ? (
+              <><span>✓</span><span>Copied</span></>
+            ) : (
+              <><span>📋</span><span>Copy</span></>
+            )}
+          </button>
+        </CopyToClipboard>
+      </div>
+
+      {/* 核心高亮：使用 VS Code 彩虹配色 */}
+      <SyntaxHighlighter
+        style={vscDarkPlus} 
+        language={language}
+        PreTag="div"
+        // 🔥 排版微调：极致干净，去掉多余内边距
+        className="text-[13px] !leading-[1.8] !p-6 !m-0 !bg-transparent"
+      >
+        {value}
+      </SyntaxHighlighter>
+    </div>
+  );
+};
+
 export default function MarkdownRenderer({ content }: { content: string }) {
   const [mounted, setMounted] = useState(false);
-  const markdownRef = useRef<HTMLDivElement>(null); // 🔥 用于包裹 Markdown 的容器
+  const markdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // 核心逻辑：记录组件是否已经抵达浏览器
     setMounted(true);
   }, []);
 
-  // 核心逻辑 2：当内容加载完毕，并且确保已经在浏览器挂载时，激活图片放大特效
   useEffect(() => {
-    // 🔥 此处是神级修复，解决了“图片不能放大”的问题：必须在 content 有值且已经在浏览器端挂载后才启动！
+    // 激活图片放大特效
     if (mounted && content && markdownRef.current) {
-      // 在浏览器端稍作等待，确保 Notion 的图片已经全部下载完毕
+      // 这里的 timer 机制不变，保证 Notion 图片加载完后挂载
       const timer = setTimeout(() => {
         const images = markdownRef.current?.querySelectorAll('img') || [];
         if (images.length > 0) {
           mediumZoom(images, {
-            margin: 24, // 放大时图片与屏幕边缘的距离
-            background: 'rgba(250, 250, 250, 0.95)', // 放大时的半透明背景色
+            margin: 24, 
+            background: 'rgba(250, 250, 250, 0.95)', 
           });
         }
-      }, 500); // 延迟 500ms 启动
+      }, 500);
       
-      return () => clearTimeout(timer); // 清理定时器
+      return () => clearTimeout(timer); 
     }
   }, [mounted, content]);
 
@@ -56,9 +101,8 @@ export default function MarkdownRenderer({ content }: { content: string }) {
   }
 
   return (
-    // 🔥 给容器加上 ref，并添加 hover:prose-img:cursor-zoom-in，让鼠标移到图片上时显示放大镜图标
-    // 🔥 同时添加 relative z-20，确保层级正确
-    <div ref={markdownRef} className="hover:prose-img:cursor-zoom-in relative z-20">
+    // 添加 hover:prose-img:cursor-zoom-in，并添加 relative z-10，确保层级正确
+    <div ref={markdownRef} className="hover:prose-img:cursor-zoom-in relative z-10">
       <ReactMarkdown
         components={{
           h2: ({node, children, ...props}) => <h2 id={generateId(children)} className="scroll-mt-24 font-bold mt-14 mb-6 text-2xl" {...props}>{children}</h2>,
@@ -67,13 +111,12 @@ export default function MarkdownRenderer({ content }: { content: string }) {
           hr: ({node, ...props}) => <hr className="my-12 border-gray-100" {...props} />,
           img: ({node, src, alt, ...props}) => (
             <span className="flex flex-col items-center my-10">
-              {/* 这里去掉之前的 border 和 shadow，保持图片清爽 */}
               <img src={src} alt={alt} className="rounded-xl max-h-[600px] object-contain" loading="lazy" {...props} />
               {alt && <span className="text-sm text-gray-400 mt-3">{alt}</span>}
             </span>
           ),
 
-          // 🔥 终极核心替换：我们要把代码块的渲染，交给刚才写的带有复制功能的 SyntaxCard！
+          // 🔥 终极替换：我们要把代码块的渲染，交给刚才写的带有复制功能的 SyntaxCard！
           code({ node, inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : 'text'; // 没写语言默认当纯文本处理
@@ -81,15 +124,11 @@ export default function MarkdownRenderer({ content }: { content: string }) {
             // 1. 如果是占满一整行的代码块
             if (!inline) {
               return (
-                <SyntaxCard language={language}>
-                  {String(children).replace(/\n$/, '')}
-                </SyntaxCard>
+                <CleanCodeBlock language={language} value={String(children).replace(/\n$/, '')} />
               );
             }
 
             // 2. 如果是夹在一段话中间的“行内代码”
-            // 🔥 这里重构行内代码颜色（图里的 fminunc）：
-            // 文字：改成沉稳的 "#0055cc"（极客蓝），告别突兀的红色。背景：改成极淡的 "#f1f5f9" (Tailwind slate-100)
             return (
               <code className={`bg-[#f1f5f9] text-[#0055cc] px-1.5 py-0.5 rounded text-[13.5px] font-mono mx-0.5 break-words ${className || ''}`} {...props}>
                 {children}
