@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { tomorrow } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import mediumZoom from 'medium-zoom'; 
 
 function extractText(children: any): string {
   if (typeof children === 'string') return children;
@@ -16,8 +17,17 @@ const generateId = (children: any) => extractText(children).trim().replace(/\s+/
 
 export default function MarkdownRenderer({ content }: { content: string }) {
   const [mounted, setMounted] = useState(false);
+  const markdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    if (markdownRef.current) {
+      mediumZoom(markdownRef.current.querySelectorAll('img'), {
+        margin: 24,
+        background: 'rgba(250, 250, 250, 0.95)',
+      });
+    }
+  }, []);
 
   if (!mounted) {
     return (
@@ -30,58 +40,52 @@ export default function MarkdownRenderer({ content }: { content: string }) {
   }
 
   return (
-    <ReactMarkdown
-      components={{
-        h2: ({node, children, ...props}) => <h2 id={generateId(children)} className="scroll-mt-24 font-bold mt-14 mb-6 text-2xl" {...props}>{children}</h2>,
-        h3: ({node, children, ...props}) => <h3 id={generateId(children)} className="scroll-mt-24 font-semibold mt-10 mb-4 text-xl text-gray-800" {...props}>{children}</h3>,
-        
-        // 🔥 细节：加粗字体加深，且带一点点极淡的灰底，更醒目
-        strong: ({node, children, ...props}) => <strong className="font-semibold text-gray-900 bg-gray-100/50 px-1 rounded mx-0.5" {...props}>{children}</strong>,
-        
-        // 🔥 细节：优雅的分割线
-        hr: ({node, ...props}) => <hr className="my-12 border-gray-100" {...props} />,
+    <div ref={markdownRef} className="hover:prose-img:cursor-zoom-in">
+      <ReactMarkdown
+        components={{
+          h2: ({node, children, ...props}) => <h2 id={generateId(children)} className="scroll-mt-24 font-bold mt-14 mb-6 text-2xl" {...props}>{children}</h2>,
+          h3: ({node, children, ...props}) => <h3 id={generateId(children)} className="scroll-mt-24 font-semibold mt-10 mb-4 text-xl text-gray-800" {...props}>{children}</h3>,
+          strong: ({node, children, ...props}) => <strong className="font-semibold text-gray-900 bg-gray-100/50 px-1 rounded mx-0.5" {...props}>{children}</strong>,
+          hr: ({node, ...props}) => <hr className="my-12 border-gray-100" {...props} />,
+          img: ({node, src, alt, ...props}) => (
+            <span className="flex flex-col items-center my-10">
+              <img src={src} alt={alt} className="rounded-xl max-h-[600px] object-contain" loading="lazy" {...props} />
+              {alt && <span className="text-sm text-gray-400 mt-3">{alt}</span>}
+            </span>
+          ),
+          code({ node, inline, className, children, ...props }: any) {
+            const match = /language-(\w+)/.exec(className || '');
+            const language = match ? match[1] : 'text';
 
-        // 🔥 细节：图片圆角与微阴影，自动居中
-        img: ({node, src, alt, ...props}) => (
-          <span className="flex flex-col items-center my-10">
-            <img src={src} alt={alt} className="rounded-xl border border-gray-100 shadow-sm max-h-[600px] object-contain" loading="lazy" {...props} />
-            {alt && <span className="text-sm text-gray-400 mt-3">{alt}</span>}
-          </span>
-        ),
+            if (!inline) {
+              return (
+                <SyntaxHighlighter
+                  style={tomorrow}
+                  language={language}
+                  PreTag="div"
+                  className="rounded-lg my-8 text-[13px] !bg-[#1a1a1c] border border-gray-100/10"
+                  {...props}
+                >
+                  {String(children).replace(/\n$/, '')}
+                </SyntaxHighlighter>
+              );
+            }
 
-        code({ node, inline, className, children, ...props }: any) {
-          const match = /language-(\w+)/.exec(className || '');
-          const language = match ? match[1] : 'text';
-
-          if (!inline) {
             return (
-              <SyntaxHighlighter
-                style={vscDarkPlus}
-                language={language}
-                PreTag="div"
-                className="rounded-lg shadow-sm my-8 text-[13px] !bg-[#1E1E1E] border border-gray-800/50"
-                {...props}
-              >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
+              <code className={`bg-[#f1f5f9] text-[#0055cc] px-1.5 py-0.5 rounded text-[13.5px] font-mono mx-0.5 break-words ${className || ''}`} {...props}>
+                {children}
+              </code>
             );
-          }
-
-          return (
-            <code className={`bg-[#F1F1F0] text-[#EB5757] px-1.5 py-0.5 rounded text-[13.5px] font-mono mx-0.5 ${className || ''}`} {...props}>
+          },
+          blockquote: ({node, children, ...props}) => (
+            <blockquote className="border-l-4 border-gray-300 bg-gray-50 pl-5 py-2 my-8 text-gray-600 italic rounded-r-xl" {...props}>
               {children}
-            </code>
-          );
-        },
-
-        blockquote: ({node, children, ...props}) => (
-          <blockquote className="border-l-4 border-gray-300 bg-gray-50 pl-5 py-2 my-8 text-gray-600 italic rounded-r-xl" {...props}>
-            {children}
-          </blockquote>
-        )
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+            </blockquote>
+          )
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 }
