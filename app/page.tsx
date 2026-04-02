@@ -36,13 +36,13 @@ function Header() {
         
         {/* 精简后的三大金刚键 */}
         <nav className="flex items-center gap-6 md:gap-8 text-sm font-medium text-gray-500">
-          <Link href="/" className="text-gray-900 font-bold">首页</Link>
-          <Link href="/" className="hover:text-blue-600 transition-colors">分类</Link>
-          <button className="hover:text-blue-600 transition-colors flex items-center gap-1.5 cursor-pointer">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            搜索
-          </button>
-        </nav>
+            <Link href="/" className="hover:text-blue-600 transition-colors">首页</Link>
+            <Link href="/search" className="hover:text-blue-600 transition-colors">分类</Link>
+            <Link href="/search" className="hover:text-blue-600 transition-colors flex items-center gap-1.5 cursor-pointer">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              搜索
+            </Link>
+          </nav>
       </div>
     </header>
   );
