@@ -59,17 +59,43 @@ function Bio() {
   );
 }
 
+// 仅替换 PostCard 这个函数，保留文件里的其他代码不变
 function PostCard({ post }: { post: any }) {
   const titleProp = post.properties.Name || post.properties.title;
   const title = titleProp?.title?.[0]?.plain_text || "无标题文章";
   const date = post.created_time ? new Date(post.created_time).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : "";
   
+  // 🔥 新增：从 Notion 数据中提取我们刚才建的 Category 和 Tags
+  const category = post.properties.Category?.select?.name;
+  const tags = post.properties.Tags?.multi_select || [];
+
   return (
     <Link href={`/post/${post.id}`} className="block h-full">
       <article className="group p-8 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between relative z-10">
-        <h2 className="text-2xl font-bold tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">
-          {title}
-        </h2>
+        <div>
+          {/* 🔥 渲染分类徽章 */}
+          {category && (
+            <span className="inline-block px-3 py-1 mb-4 rounded-full bg-blue-50 text-blue-600 text-[11px] font-bold tracking-wider uppercase">
+              {category}
+            </span>
+          )}
+          
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">
+            {title}
+          </h2>
+          
+          {/* 🔥 渲染标签阵列 */}
+          {tags.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {tags.map((tag: any) => (
+                <span key={tag.id} className="px-2 py-0.5 rounded bg-gray-50 border border-gray-100 text-gray-400 text-xs font-mono">
+                  #{tag.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
         <footer className="mt-10 flex items-center justify-between text-sm text-gray-400 font-mono">
           <span>{date}</span>
           <span className="font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0">阅读全文 →</span>
