@@ -24,6 +24,7 @@ async function getPosts() {
   return data.results;
 }
 
+// 🔥 终极极简导航栏
 function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md">
@@ -33,12 +34,14 @@ function Header() {
           <span>Dev Log</span>
         </Link>
         
-        {/* 🔥 满足你的需求：新增顶部导航栏菜单 */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-500">
+        {/* 精简后的三大金刚键 */}
+        <nav className="flex items-center gap-6 md:gap-8 text-sm font-medium text-gray-500">
           <Link href="/" className="text-gray-900 font-bold">首页</Link>
-          <Link href="/" className="hover:text-blue-600 transition-colors">技术文章</Link>
-          <Link href="/" className="hover:text-blue-600 transition-colors">项目笔记</Link>
-          <Link href="/" className="hover:text-blue-600 transition-colors">关于我</Link>
+          <Link href="/" className="hover:text-blue-600 transition-colors">分类</Link>
+          <button className="hover:text-blue-600 transition-colors flex items-center gap-1.5 cursor-pointer">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            搜索
+          </button>
         </nav>
       </div>
     </header>
@@ -73,11 +76,9 @@ function PostCard({ post }: { post: any }) {
   const title = titleProp?.title?.[0]?.plain_text || "无标题文章";
   const date = post.created_time ? new Date(post.created_time).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : "";
   
-  // 🔥 终极防坑：模糊抓取！不管你管这列叫 Category 还是 分类，全都能抓到！
   const categoryField = props.Category || props.category || props['分类'] || props['类别'];
   const category = categoryField?.select?.name;
 
-  // 🔥 不管你叫 Tags 还是 标签，一网打尽！
   const tagsField = props.Tags || props.tags || props['标签'];
   const tags = tagsField?.multi_select || [];
 

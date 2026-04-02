@@ -31,7 +31,6 @@ export async function generateStaticParams() {
   return data.results.map((post: any) => ({ id: post.id }));
 }
 
-// 🔥 核心升级：同时抓取页面的属性（标题、时间）和正文内容
 async function getPostData(id: string) {
   try {
     const page: any = await notion.pages.retrieve({ page_id: id });
@@ -41,7 +40,6 @@ async function getPostData(id: string) {
     const title = titleProp?.title?.[0]?.plain_text || "无标题文章";
     const date = page.created_time ? new Date(page.created_time).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : "";
 
-    // 🔥 同样进行全覆盖模糊抓取
     const categoryField = props.Category || props.category || props['分类'] || props['类别'];
     const category = categoryField?.select?.name || null;
 
@@ -74,22 +72,38 @@ function extractHeadings(mdString: string) {
 
 export default async function PostDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // 🔥 这里接收 category 和 tags
   const { title, date, content, category, tags } = await getPostData(id); 
   const headings = extractHeadings(content); 
   const readTime = Math.max(1, Math.ceil(content.length / 400));
 
   return (
     <div className="min-h-screen">
-      {/* ... 上面的导航栏代码保持不变 ... */}
-      
-      <div className="pt-24 pb-32">
+      {/* 🔥 这里是刚才被你不小心删掉的全局导航栏，我帮你加回来了，并同步了三大金刚键 */}
+      <header className="fixed top-0 inset-x-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-md">
+        <div className="container max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2 font-mono text-xl font-bold tracking-tight text-gray-900 group">
+            <div className="size-8 rounded bg-gray-900 text-white flex items-center justify-center group-hover:bg-blue-600 transition-colors">X</div>
+            <span>Dev Log</span>
+          </Link>
+          
+          <nav className="flex items-center gap-6 md:gap-8 text-sm font-medium text-gray-500">
+            <Link href="/" className="hover:text-blue-600 transition-colors">首页</Link>
+            <Link href="/" className="hover:text-blue-600 transition-colors">分类</Link>
+            <button className="hover:text-blue-600 transition-colors flex items-center gap-1.5 cursor-pointer">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              搜索
+            </button>
+          </nav>
+        </div>
+      </header>
+
+      {/* 注意这里的 pt-28，给上方固定的导航栏留出空间 */}
+      <div className="pt-28 pb-32">
         <div className="container max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col lg:flex-row gap-12 items-start justify-center">
             
             <main className="flex-1 w-full max-w-[820px] bg-white rounded-xl p-8 md:p-10 lg:p-14 relative z-10 border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
               
-              {/* 🔥 升级版的文章头部：加入分类和标签 */}
               <header className="mb-10 pb-10 border-b border-gray-100/80">
                 {category && (
                   <div className="mb-5">
@@ -112,7 +126,6 @@ export default async function PostDetail({ params }: { params: Promise<{ id: str
                   </div>
                 </div>
 
-                {/* 渲染标签 */}
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {tags.map((tag: any) => (
