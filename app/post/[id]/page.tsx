@@ -2,7 +2,7 @@ import { Client } from "@notionhq/client";
 import { NotionToMarkdown } from "notion-to-md";
 import Link from "next/link";
 import MarkdownRenderer from "./MarkdownRenderer";
-import ArticleSidebar from "./ArticleSidebar"; 
+import ArticleSidebar from "./ArticleSidebar";
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const n2m = new NotionToMarkdown({ notionClient: notion });
@@ -31,24 +31,29 @@ export async function generateStaticParams() {
   return data.results.map((post: any) => ({ id: post.id }));
 }
 
-async function getPostContent(id: string) {
+// 🔥 核心升级：同时抓取页面的属性（标题、时间）和正文内容
+async function getPostData(id: string) {
   try {
+    const page: any = await notion.pages.retrieve({ page_id: id });
+    const titleProp = page.properties.Name || page.properties.title;
+    const title = titleProp?.title?.[0]?.plain_text || "无标题文章";
+    const date = page.created_time ? new Date(page.created_time).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : "";
+
     const mdblocks = await n2m.pageToMarkdown(id);
-    return n2m.toMarkdownString(mdblocks).parent || "";
+    const content = n2m.toMarkdownString(mdblocks).parent || "";
+    
+    return { title, date, content };
   } catch (error) {
-    return "获取文章内容失败，请检查网络或配置。";
+    return { title: "文章加载失败", date: "", content: "获取文章内容失败，请检查网络或配置。" };
   }
 }
 
-// 提取目录的神器也升级了，能自动过滤掉特殊的 Markdown 符号
 function extractHeadings(mdString: string) {
   const regex = /^(##|###)\s+(.+)$/gm;
   const headings = [];
   let match;
   while ((match = regex.exec(mdString)) !== null) {
-    let rawText = match[2];
-    // 去掉加粗和斜体符号，拿到纯净的标题名字
-    let cleanText = rawText.replace(/[*_~`]/g, '').trim(); 
+    let cleanText = match[2].replace(/[*_~`]/g, '').trim(); 
     headings.push({
       level: match[1].length, 
       text: cleanText,
@@ -60,8 +65,11 @@ function extractHeadings(mdString: string) {
 
 export default async function PostDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const content = await getPostContent(id); 
+  const { title, date, content } = await getPostData(id); 
   const headings = extractHeadings(content); 
+
+  // 计算一个大概的阅读时间（按每分钟 400 字算）
+  const readTime = Math.max(1, Math.ceil(content.length / 400));
 
   return (
     <div className="min-h-screen">
@@ -83,10 +91,26 @@ export default async function PostDetail({ params }: { params: Promise<{ id: str
         <div className="container max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col lg:flex-row gap-12 items-start justify-center">
             
-            {/* 注入 Notion 风格的核心代码段：去掉了生硬的阴影，采用扁平化排版 */}
-            <main className="flex-1 w-full max-w-[800px] bg-white rounded-xl p-8 md:p-12 relative z-10 border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-              {/* prose-slate 定义了全局的克制灰黑调，prose-p 等专门调整了行距 */}
-              <article className="prose prose-slate max-w-none prose-p:leading-relaxed prose-p:text-[#37352f] prose-a:text-gray-500 hover:prose-a:text-gray-900 prose-img:rounded-xl prose-li:text-[#37352f]">
+            {/* 🔥 增大了卡片的 padding (lg:p-14)，增加呼吸感留白 */}
+            <main className="flex-1 w-full max-w-[820px] bg-white rounded-xl p-8 md:p-10 lg:p-14 relative z-10 border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+              
+              {/* 🔥 新增：极具仪式感的文章头部信息区 */}
+              <header className="mb-10 pb-10 border-b border-gray-100/80">
+                <h1 className="text-3xl sm:text-4xl lg:text-[40px] font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+                  {title}
+                </h1>
+                <div className="flex items-center gap-5 text-sm text-gray-500 font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-300">📅</span> {date}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-300">⏱️</span> 阅读约 {readTime} 分钟
+                  </div>
+                </div>
+              </header>
+
+              {/* 正文渲染区 */}
+              <article className="prose prose-slate max-w-none prose-p:leading-[1.8] prose-p:text-[#37352f] prose-a:text-blue-600 hover:prose-a:text-blue-800 prose-a:no-underline hover:prose-a:underline prose-li:text-[#37352f]">
                 <MarkdownRenderer content={content} />
               </article>
             </main>

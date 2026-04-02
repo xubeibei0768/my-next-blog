@@ -32,22 +32,34 @@ export default function MarkdownRenderer({ content }: { content: string }) {
   return (
     <ReactMarkdown
       components={{
-        h2: ({node, children, ...props}) => <h2 id={generateId(children)} className="scroll-mt-28 font-semibold mt-12 mb-6 text-2xl border-b pb-2" {...props}>{children}</h2>,
-        h3: ({node, children, ...props}) => <h3 id={generateId(children)} className="scroll-mt-28 font-medium mt-8 mb-4 text-xl" {...props}>{children}</h3>,
+        h2: ({node, children, ...props}) => <h2 id={generateId(children)} className="scroll-mt-24 font-bold mt-14 mb-6 text-2xl" {...props}>{children}</h2>,
+        h3: ({node, children, ...props}) => <h3 id={generateId(children)} className="scroll-mt-24 font-semibold mt-10 mb-4 text-xl text-gray-800" {...props}>{children}</h3>,
         
-        // 🔥 终极核心修复：删掉所有花里胡哨的 pre 拦截，用官方推荐的 inline 属性判断！
+        // 🔥 细节：加粗字体加深，且带一点点极淡的灰底，更醒目
+        strong: ({node, children, ...props}) => <strong className="font-semibold text-gray-900 bg-gray-100/50 px-1 rounded mx-0.5" {...props}>{children}</strong>,
+        
+        // 🔥 细节：优雅的分割线
+        hr: ({node, ...props}) => <hr className="my-12 border-gray-100" {...props} />,
+
+        // 🔥 细节：图片圆角与微阴影，自动居中
+        img: ({node, src, alt, ...props}) => (
+          <span className="flex flex-col items-center my-10">
+            <img src={src} alt={alt} className="rounded-xl border border-gray-100 shadow-sm max-h-[600px] object-contain" loading="lazy" {...props} />
+            {alt && <span className="text-sm text-gray-400 mt-3">{alt}</span>}
+          </span>
+        ),
+
         code({ node, inline, className, children, ...props }: any) {
           const match = /language-(\w+)/.exec(className || '');
-          const language = match ? match[1] : 'text'; // 没写语言默认当纯文本处理
+          const language = match ? match[1] : 'text';
 
-          // 1. 如果不是行内代码（也就是 Notion 里那种占满一整行的代码块）
           if (!inline) {
             return (
               <SyntaxHighlighter
                 style={vscDarkPlus}
                 language={language}
                 PreTag="div"
-                className="rounded-lg shadow-sm my-6 text-sm !bg-[#1E1E1E]"
+                className="rounded-lg shadow-sm my-8 text-[13px] !bg-[#1E1E1E] border border-gray-800/50"
                 {...props}
               >
                 {String(children).replace(/\n$/, '')}
@@ -55,16 +67,15 @@ export default function MarkdownRenderer({ content }: { content: string }) {
             );
           }
 
-          // 2. 如果是夹在一段话中间的“行内代码”
           return (
-            <code className={`bg-[#F1F1F0] text-[#EB5757] px-1.5 py-0.5 rounded text-sm font-mono break-words ${className || ''}`} {...props}>
+            <code className={`bg-[#F1F1F0] text-[#EB5757] px-1.5 py-0.5 rounded text-[13.5px] font-mono mx-0.5 ${className || ''}`} {...props}>
               {children}
             </code>
           );
         },
 
         blockquote: ({node, children, ...props}) => (
-          <blockquote className="border-l-4 border-gray-800 bg-gray-50 pl-4 py-1 my-6 text-gray-600 italic rounded-r-lg" {...props}>
+          <blockquote className="border-l-4 border-gray-300 bg-gray-50 pl-5 py-2 my-8 text-gray-600 italic rounded-r-xl" {...props}>
             {children}
           </blockquote>
         )
