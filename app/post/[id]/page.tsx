@@ -35,18 +35,23 @@ export async function generateStaticParams() {
 async function getPostData(id: string) {
   try {
     const page: any = await notion.pages.retrieve({ page_id: id });
-    const titleProp = page.properties.Name || page.properties.title;
+    const props = page.properties;
+    
+    const titleProp = props.Name || props.title;
     const title = titleProp?.title?.[0]?.plain_text || "无标题文章";
     const date = page.created_time ? new Date(page.created_time).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : "";
 
-    // 🔥 新增：抓取文章的分类和标签
-    const category = page.properties.Category?.select?.name || null;
-    const tags = page.properties.Tags?.multi_select || [];
+    // 🔥 同样进行全覆盖模糊抓取
+    const categoryField = props.Category || props.category || props['分类'] || props['类别'];
+    const category = categoryField?.select?.name || null;
+
+    const tagsField = props.Tags || props.tags || props['标签'];
+    const tags = tagsField?.multi_select || [];
 
     const mdblocks = await n2m.pageToMarkdown(id);
     const content = n2m.toMarkdownString(mdblocks).parent || "";
     
-    return { title, date, content, category, tags }; // 把 category 和 tags 传出去
+    return { title, date, content, category, tags };
   } catch (error) {
     return { title: "文章加载失败", date: "", content: "获取文章内容失败，请检查网络或配置。", category: null, tags: [] };
   }

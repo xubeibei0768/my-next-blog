@@ -32,6 +32,14 @@ function Header() {
           <div className="size-8 rounded bg-gray-900 text-white flex items-center justify-center group-hover:bg-blue-600 transition-colors">X</div>
           <span>Dev Log</span>
         </Link>
+        
+        {/* 🔥 满足你的需求：新增顶部导航栏菜单 */}
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-500">
+          <Link href="/" className="text-gray-900 font-bold">首页</Link>
+          <Link href="/" className="hover:text-blue-600 transition-colors">技术文章</Link>
+          <Link href="/" className="hover:text-blue-600 transition-colors">项目笔记</Link>
+          <Link href="/" className="hover:text-blue-600 transition-colors">关于我</Link>
+        </nav>
       </div>
     </header>
   );
@@ -59,21 +67,24 @@ function Bio() {
   );
 }
 
-// 仅替换 PostCard 这个函数，保留文件里的其他代码不变
 function PostCard({ post }: { post: any }) {
-  const titleProp = post.properties.Name || post.properties.title;
+  const props = post.properties;
+  const titleProp = props.Name || props.title;
   const title = titleProp?.title?.[0]?.plain_text || "无标题文章";
   const date = post.created_time ? new Date(post.created_time).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : "";
   
-  // 🔥 新增：从 Notion 数据中提取我们刚才建的 Category 和 Tags
-  const category = post.properties.Category?.select?.name;
-  const tags = post.properties.Tags?.multi_select || [];
+  // 🔥 终极防坑：模糊抓取！不管你管这列叫 Category 还是 分类，全都能抓到！
+  const categoryField = props.Category || props.category || props['分类'] || props['类别'];
+  const category = categoryField?.select?.name;
+
+  // 🔥 不管你叫 Tags 还是 标签，一网打尽！
+  const tagsField = props.Tags || props.tags || props['标签'];
+  const tags = tagsField?.multi_select || [];
 
   return (
     <Link href={`/post/${post.id}`} className="block h-full">
       <article className="group p-8 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between relative z-10">
         <div>
-          {/* 🔥 渲染分类徽章 */}
           {category && (
             <span className="inline-block px-3 py-1 mb-4 rounded-full bg-blue-50 text-blue-600 text-[11px] font-bold tracking-wider uppercase">
               {category}
@@ -84,7 +95,6 @@ function PostCard({ post }: { post: any }) {
             {title}
           </h2>
           
-          {/* 🔥 渲染标签阵列 */}
           {tags.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
               {tags.map((tag: any) => (
@@ -114,7 +124,6 @@ export default async function Home() {
       <Bio />
       <main className="container max-w-7xl mx-auto px-4 sm:px-6 pb-24 relative z-10">
         <div className="border-t border-gray-200 pt-16">
-          {/* 关键修复：这里的 grid 和 col-span 保证了卡片绝对不会重叠 */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
             {posts.map((post: any) => (
               <PostCard key={post.id} post={post} />
