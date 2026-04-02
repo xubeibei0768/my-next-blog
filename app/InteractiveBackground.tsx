@@ -8,190 +8,182 @@ export default function InteractiveBackground() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false }); // 关闭 alpha 通道优化渲染性能
     if (!ctx) return;
 
-    let particles: Particle[] = [];
     let animationFrameId: number;
+    let points: Point[] = [];
+    
+    // 鼠标真实位置与插值（带阻尼的平滑移动）
     let mouseX = -1000;
     let mouseY = -1000;
-    let clickRipple: { x: number, y: number, radius: number } | null = null;
+    let targetMouseX = -1000;
+    let targetMouseY = -1000;
+    
     let canvasWidth = 0;
     let canvasHeight = 0;
+    let cols = 0;
+    let rows = 0;
 
-    // 1. 核心修复：用真实的容器尺寸，彻底避开“滚动条压缩”的坑
+    // --- 顶级交互的物理参数 ---
+    const SPACING = 40;     // 网格基础间距
+    const RADIUS = 180;     // 鼠标引力场半径
+    const SPRING = 0.08;    // 弹性回复系数（越小越柔和）
+    const FRICTION = 0.75;  // 摩擦力阻尼（控制震荡感）
+
+    class Point {
+      x: number; y: number; baseX: number; baseY: number;
+      vx: number; vy: number;
+
+      constructor(x: number, y: number) {
+        this.x = x; this.y = y;
+        this.baseX = x; this.baseY = y;
+        this.vx = 0; this.vy = 0;
+      }
+
+      update() {
+        // 1. 鼠标排斥物理逻辑
+        let dx = mouseX - this.x;
+        let dy = mouseY - this.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < RADIUS) {
+          // 越靠近中心，排斥力越大
+          let force = (RADIUS - dist) / RADIUS;
+          let angle = Math.atan2(dy, dx);
+          this.vx -= Math.cos(angle) * force * 1.5;
+          this.vy -= Math.sin(angle) * force * 1.5;
+        }
+
+        // 2. 弹簧恢复力逻辑（回到原始网格位置）
+        this.vx += (this.baseX - this.x) * SPRING;
+        this.vy += (this.baseY - this.y) * SPRING;
+
+        // 3. 摩擦力减速
+        this.vx *= FRICTION;
+        this.vy *= FRICTION;
+
+        // 应用速度
+        this.x += this.vx;
+        this.y += this.vy;
+      }
+    }
+
     const resize = () => {
-      // 获取 Canvas 元素在屏幕上的真实物理边界
       const rect = canvas.getBoundingClientRect();
       const ratio = window.devicePixelRatio || 1;
       
       canvasWidth = rect.width;
       canvasHeight = rect.height;
-
-      // 让画布的高清像素 100% 吻合屏幕的显示像素
       canvas.width = canvasWidth * ratio;
       canvas.height = canvasHeight * ratio;
-      
       ctx.scale(ratio, ratio);
-      initParticles(); 
+      
+      initGrid();
     };
 
-    // 2. 粒子类
-    class Particle {
-      x: number; y: number; size: number; baseX: number; baseY: number;
-      color: string; originalColor: string; velocityX: number; velocityY: number;
+    const initGrid = () => {
+      points = [];
+      cols = Math.ceil(canvasWidth / SPACING) + 1;
+      rows = Math.ceil(canvasHeight / SPACING) + 1;
 
-      constructor(x: number, y: number) {
-        this.x = x; this.y = y; this.size = 1.5;
-        this.baseX = x; this.baseY = y;
-        this.color = 'rgba(59, 130, 246, 0.15)'; 
-        this.originalColor = this.color;
-        this.velocityX = (Math.random() - 0.5) * 0.2; 
-        this.velocityY = (Math.random() - 0.5) * 0.2;
-      }
-
-      draw() {
-        if (!ctx) return;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-      }
-
-      update() {
-        this.x += this.velocityX;
-        this.y += this.velocityY;
-        if (this.x > canvasWidth || this.x < 0) this.velocityX *= -1;
-        if (this.y > canvasHeight || this.y < 0) this.velocityY *= -1;
-
-        let dx = mouseX - this.x;
-        let dy = mouseY - this.y;
-        let distance = Math.sqrt(dx * dx + dy * dy);
-        const maxRepulseDistance = 150; 
-
-        if (distance < maxRepulseDistance) {
-          let forceFactor = (maxRepulseDistance - distance) / maxRepulseDistance;
-          let forceX = dx / distance * forceFactor * 10; 
-          let forceY = dy / distance * forceFactor * 10;
-          this.x -= forceX;
-          this.y -= forceY;
-          this.color = `rgba(59, 130, 246, ${0.15 + forceFactor * 0.6})`; 
-        } else {
-          if (this.x !== this.baseX || this.y !== this.baseY) {
-            this.x += (this.baseX - this.x) * 0.05; 
-            this.y += (this.baseY - this.y) * 0.05;
-          }
-          this.color = this.originalColor;
+      for (let i = 0; i < cols; i++) {
+        for (let j = 0; j < rows; j++) {
+          // 初始化网格点阵
+          points.push(new Point(i * SPACING, j * SPACING));
         }
-
-        if (clickRipple) {
-          let cdx = clickRipple.x - this.x;
-          let cdy = clickRipple.y - this.y;
-          let cDistance = Math.sqrt(cdx * cdx + cdy * cdy);
-          const rippleWidth = 10;
-
-          if (cDistance < clickRipple.radius && cDistance > clickRipple.radius - rippleWidth) {
-            let rippleForceFactor = (rippleWidth - Math.abs(cDistance - (clickRipple.radius - rippleWidth/2))) / rippleWidth;
-            let rippleForceX = cdx / cDistance * rippleForceFactor * 2;
-            let rippleForceY = cdy / cDistance * rippleForceFactor * 2;
-            this.x += rippleForceX; 
-            this.y += rippleForceY;
-          }
-        }
-
-        this.draw();
-      }
-    }
-
-    const initParticles = () => {
-      particles = [];
-      const gap = 24; 
-      for (let y = 0; y < canvasHeight; y += gap) {
-        for (let x = 0; x < canvasWidth; x += gap) {
-          particles.push(new Particle(x + Math.random()*2, y + Math.random()*2)); 
-        }
-      }
-    };
-
-    const drawLines = (particle: Particle) => {
-      if (!ctx) return;
-      let dx = mouseX - particle.x;
-      let dy = mouseY - particle.y;
-      let distance = Math.sqrt(dx * dx + dy * dy);
-      const maxConnectDistance = 120; 
-
-      if (distance < maxConnectDistance) {
-        let opacity = 1 - (distance / maxConnectDistance);
-        ctx.strokeStyle = `rgba(59, 130, 246, ${opacity * 0.08})`; 
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(particle.x, particle.y);
-        ctx.lineTo(mouseX, mouseY);
-        ctx.stroke();
-      }
-    };
-
-    const updateRipple = () => {
-      if (clickRipple) {
-        clickRipple.radius += 5; 
-        if (clickRipple.radius > 200) clickRipple = null;
       }
     };
 
     const animate = () => {
-      if (!ctx) return;
-      ctx.clearRect(0, 0, canvasWidth, canvasHeight); 
+      // 填充底色（替代 clearRect，解决闪烁并提升性能）
+      ctx.fillStyle = '#fafafa';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-      updateRipple();
+      // 核心质感：给鼠标坐标加“缓动阻尼”，让光晕和力场显得极其平滑沉稳
+      mouseX += (targetMouseX - mouseX) * 0.15;
+      mouseY += (targetMouseY - mouseY) * 0.15;
 
-      particles.forEach(particle => {
-        particle.update(); 
-        drawLines(particle); 
-      });
+      // 更新所有节点的物理状态
+      points.forEach(p => p.update());
 
-      animationFrameId = requestAnimationFrame(animate); 
+      // --- 绘制动态拓扑网格 ---
+      ctx.strokeStyle = 'rgba(150, 150, 150, 0.12)'; // 极其克制的极客灰网格
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      
+      for (let i = 0; i < cols; i++) {
+        for (let j = 0; j < rows; j++) {
+          let idx = i * rows + j;
+          let p = points[idx];
+          
+          // 向右连线
+          if (i < cols - 1) {
+            let rightP = points[(i + 1) * rows + j];
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(rightP.x, rightP.y);
+          }
+          // 向下连线
+          if (j < rows - 1) {
+            let bottomP = points[i * rows + (j + 1)];
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(bottomP.x, bottomP.y);
+          }
+        }
+      }
+      ctx.stroke();
+
+      // --- 绘制大厂级流体光晕 (Spotlight) ---
+      if (mouseX > 0 && mouseY > 0) {
+        const gradient = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 400);
+        // 中心是很淡的科技蓝，向外过渡到浅紫，最后透明
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.08)');
+        gradient.addColorStop(0.5, 'rgba(139, 92, 246, 0.03)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      }
+
+      animationFrameId = requestAnimationFrame(animate);
     };
 
-    // 3. 核心修复：精准扣除画布在屏幕上的边距，拿到 100% 准确的鼠标坐标
+    // 坐标拾取
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
-      mouseX = e.clientX - rect.left;
-      mouseY = e.clientY - rect.top;
+      targetMouseX = e.clientX - rect.left;
+      targetMouseY = e.clientY - rect.top;
+      
+      // 防止首次移入屏幕时产生瞬间跳跃
+      if (mouseX === -1000) {
+        mouseX = targetMouseX;
+        mouseY = targetMouseY;
+      }
     };
     
     const handleMouseLeave = () => {
-      mouseX = -1000; 
-      mouseY = -1000;
-    };
-    
-    const handleClick = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      clickRipple = { x: e.clientX - rect.left, y: e.clientY - rect.top, radius: 0 };
+      targetMouseX = -1000;
+      targetMouseY = -1000;
     };
 
-    // 初始化运行
     resize(); 
-    animate(); 
-
     window.addEventListener('resize', resize);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseleave', handleMouseLeave);
-    window.addEventListener('click', handleClick);
+    animate(); 
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseleave', handleMouseLeave);
-      window.removeEventListener('click', handleClick);
     };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      // 加上 w-full h-full，让 Tailwind 严格锁死物理宽度，不给滚动条留余地
-      className="pointer-events-none fixed inset-0 z-0 w-full h-full bg-[#fafafa]"
+      className="pointer-events-none fixed inset-0 z-0 w-full h-full"
     />
   );
 }
