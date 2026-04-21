@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from "react-markdown";
+// 注意：如果你这行高亮库报错，记得确保你装了 react-syntax-highlighter
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import mediumZoom from 'medium-zoom'; 
 import SyntaxCard from "./SyntaxCard"; 
@@ -64,31 +65,35 @@ export default function MarkdownRenderer({ content }: { content: string }) {
             </span>
           ),
 
-          // 🔥🔥🔥 终极杀手锏：直接把外层的 <pre> 标签扒掉！
-          // 这行代码意味着：不要给代码块套任何框架默认的样式框，直接渲染里面的 SyntaxCard！
+          // 扒掉默认的 <pre> 标签外壳
           pre: ({ children }: any) => <>{children}</>,
 
-          code({ node, inline, className, children, ...props }: any) {
+          // 🔥🔥🔥 核心修复：极其鲁棒的代码块/行内代码判定
+          code({ node, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
-            const language = match ? match[1] : 'text'; 
+            
+            // 终极判断：只要带有语言标记，或者内容里包含换行符，就一定是代码块！
+            const isBlock = match || String(children).includes('\n');
 
-            if (!inline) {
+            if (isBlock) {
               return (
-                <SyntaxCard language={language}>
+                <SyntaxCard language={match ? match[1] : 'text'}>
                   {String(children).replace(/\n$/, '')}
                 </SyntaxCard>
               );
             }
 
+            // 否则就是行内代码（完美还原 Notion 的红字浅灰底风格）
             return (
-              <code className={`bg-[#f1f5f9] text-[#0055cc] px-1.5 py-0.5 rounded text-[13.5px] font-mono mx-0.5 break-words ${className || ''}`} {...props}>
+              <code className="px-1.5 py-0.5 mx-0.5 rounded bg-gray-100 text-[#EB5757] font-mono text-[0.85em] border border-gray-200 break-words" {...props}>
                 {children}
               </code>
             );
           },
 
+          // 顺手优化了 Callout (引用块) 的颜值
           blockquote: ({node, children, ...props}) => (
-            <blockquote className="border-l-4 border-gray-300 bg-gray-50 pl-5 py-2 my-8 text-gray-600 italic rounded-r-xl" {...props}>
+            <blockquote className="my-6 px-5 py-4 border-l-4 border-blue-500 bg-blue-50/50 rounded-r-lg text-gray-800 text-sm md:text-base leading-relaxed" {...props}>
               {children}
             </blockquote>
           )
@@ -98,4 +103,5 @@ export default function MarkdownRenderer({ content }: { content: string }) {
       </ReactMarkdown>
     </div>
   );
+  
 }

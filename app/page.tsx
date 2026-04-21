@@ -35,7 +35,7 @@ function Header() {
         </Link>
         
         {/* 精简后的三大金刚键 */}
-        <nav className="flex items-center gap-6 md:gap-8 text-sm font-medium text-gray-500">
+          <nav className="flex items-center gap-6 md:gap-8 text-sm font-medium text-gray-500">
             <Link href="/" className="hover:text-blue-600 transition-colors">首页</Link>
             <Link href="/search" className="hover:text-blue-600 transition-colors">分类</Link>
             <Link href="/search" className="hover:text-blue-600 transition-colors flex items-center gap-1.5 cursor-pointer">
