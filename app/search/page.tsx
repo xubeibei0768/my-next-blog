@@ -1,7 +1,21 @@
 import Link from "next/link";
 
+interface NotionPost {
+  id: string;
+  created_time: string;
+  properties: {
+    Name?: { title: Array<{ plain_text: string }> };
+    title?: { title: Array<{ plain_text: string }> };
+    Category?: { select?: { name: string } };
+    category?: { select?: { name: string } };
+    Tags?: { multi_select?: Array<{ id: string; name: string }> };
+    tags?: { multi_select?: Array<{ id: string; name: string }> };
+    [key: string]: any;
+  };
+}
+
 // 1. 抓取所有文章
-async function getPosts() {
+async function getPosts(): Promise<NotionPost[]> {
   const res = await fetch(`https://api.notion.com/v1/databases/${process.env.NOTION_DATABASE_ID}/query`, {
     method: 'POST',
     headers: {
@@ -25,7 +39,7 @@ async function getPosts() {
 }
 
 // 2. 复用首页的文章卡片组件
-function PostCard({ post }: { post: any }) {
+function PostCard({ post }: { post: NotionPost }) {
   const props = post.properties;
   const titleProp = props.Name || props.title;
   const title = titleProp?.title?.[0]?.plain_text || "无标题文章";
@@ -50,7 +64,7 @@ function PostCard({ post }: { post: any }) {
           </h2>
           {tags.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
-              {tags.map((tag: any) => (
+              {tags.map((tag: { id: string; name: string }) => (
                 <span key={tag.id} className="px-2 py-0.5 rounded bg-gray-50 border border-gray-100 text-gray-400 text-xs font-mono">
                   #{tag.name}
                 </span>
@@ -83,7 +97,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   }).filter(Boolean))) as string[];
 
   // 核心过滤逻辑：标题模糊匹配 + 分类精准匹配
-  const filteredPosts = posts.filter((post: any) => {
+  const filteredPosts = posts.filter((post) => {
     const titleProp = post.properties.Name || post.properties.title;
     const title = (titleProp?.title?.[0]?.plain_text || "").toLowerCase();
     const catField = post.properties.Category || post.properties.category || post.properties['分类'] || post.properties['类别'];
@@ -165,12 +179,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           </div>
           
           {filteredPosts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
-              {filteredPosts.map((post: any) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-            </div>
-          ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
+            {filteredPosts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </div>
+        ) : (
             <div className="py-32 text-center">
               <div className="text-6xl mb-6">📭</div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">没有找到相关文章</h3>

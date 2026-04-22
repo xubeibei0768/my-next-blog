@@ -1,20 +1,25 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import ReactMarkdown from "react-markdown";
-// 注意：如果你这行高亮库报错，记得确保你装了 react-syntax-highlighter
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import mediumZoom from 'medium-zoom'; 
-import SyntaxCard from "./SyntaxCard"; 
 
-function extractText(children: any): string {
+// 懒加载语法高亮组件，减少初始包体积
+const SyntaxCard = lazy(() => import("./SyntaxCard")); 
+
+function extractText(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
   if (Array.isArray(children)) return children.map(extractText).join('');
-  if (children && children.props && children.props.children) return extractText(children.props.children);
+  if (children && typeof children === 'object' && 'props' in children) {
+    const childProps = (children as { props: { children?: React.ReactNode } }).props;
+    if (childProps.children) {
+      return extractText(childProps.children);
+    }
+  }
   return '';
 }
 
-const generateId = (children: any) => extractText(children).trim().replace(/\s+/g, '-').toLowerCase();
+const generateId = (children: React.ReactNode) => extractText(children).trim().replace(/\s+/g, '-').toLowerCase();
 
 export default function MarkdownRenderer({ content }: { content: string }) {
   const [mounted, setMounted] = useState(false);
@@ -54,13 +59,19 @@ export default function MarkdownRenderer({ content }: { content: string }) {
     <div ref={markdownRef} className="hover:prose-img:cursor-zoom-in relative z-20">
       <ReactMarkdown
         components={{
-          h2: ({node, children, ...props}) => <h2 id={generateId(children)} className="scroll-mt-24 font-bold mt-14 mb-6 text-2xl" {...props}>{children}</h2>,
-          h3: ({node, children, ...props}) => <h3 id={generateId(children)} className="scroll-mt-24 font-semibold mt-10 mb-4 text-xl text-gray-800" {...props}>{children}</h3>,
-          strong: ({node, children, ...props}) => <strong className="font-semibold text-gray-900 bg-gray-100/50 px-1 rounded mx-0.5" {...props}>{children}</strong>,
-          hr: ({node, ...props}) => <hr className="my-12 border-gray-100" {...props} />,
-          img: ({node, src, alt, ...props}) => (
+          h2: ({children, ...props}) => <h2 id={generateId(children)} className="scroll-mt-24 font-bold mt-14 mb-6 text-2xl" {...props}>{children}</h2>,
+          h3: ({children, ...props}) => <h3 id={generateId(children)} className="scroll-mt-24 font-semibold mt-10 mb-4 text-xl text-gray-800" {...props}>{children}</h3>,
+          strong: ({children, ...props}) => <strong className="font-semibold text-gray-900 bg-gray-100/50 px-1 rounded mx-0.5" {...props}>{children}</strong>,
+          hr: (props) => <hr className="my-12 border-gray-100" {...props} />,
+          img: ({src, alt, ...props}) => (
             <span className="flex flex-col items-center my-10">
-              <img src={src} alt={alt} className="rounded-xl max-h-[600px] object-contain" loading="lazy" {...props} />
+              <img
+                src={src}
+                alt={alt}
+                className="rounded-xl max-h-[600px] object-contain"
+                loading="lazy"
+                {...props}
+              />
               {alt && <span className="text-sm text-gray-400 mt-3">{alt}</span>}
             </span>
           ),
@@ -69,7 +80,7 @@ export default function MarkdownRenderer({ content }: { content: string }) {
           pre: ({ children }: any) => <>{children}</>,
 
           // 🔥🔥🔥 核心修复：极其鲁棒的代码块/行内代码判定
-          code({ node, className, children, ...props }: any) {
+          code({ node, className, children, ...props }: React.ComponentProps<'code'> & { node?: any }) {
             const match = /language-(\w+)/.exec(className || '');
             
             // 终极判断：只要带有语言标记，或者内容里包含换行符，就一定是代码块！
@@ -77,9 +88,11 @@ export default function MarkdownRenderer({ content }: { content: string }) {
 
             if (isBlock) {
               return (
-                <SyntaxCard language={match ? match[1] : 'text'}>
-                  {String(children).replace(/\n$/, '')}
-                </SyntaxCard>
+                <Suspense fallback={<div className="h-32 bg-gray-100 rounded-lg animate-pulse" />}>
+                  <SyntaxCard language={match ? match[1] : 'text'}>
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxCard>
+                </Suspense>
               );
             }
 

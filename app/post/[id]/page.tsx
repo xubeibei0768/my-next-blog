@@ -1,8 +1,10 @@
 import { Client } from "@notionhq/client";
 import { NotionToMarkdown } from "notion-to-md";
 import Link from "next/link";
+import { Metadata } from "next";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ArticleSidebar from "./ArticleSidebar";
+import { generatePageSEO } from '../../lib/seo';
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const n2m = new NotionToMarkdown({ notionClient: notion });
@@ -31,9 +33,56 @@ export async function generateStaticParams() {
   return data.results.map((post: any) => ({ id: post.id }));
 }
 
-async function getPostData(id: string) {
+// 为每篇文章生成动态 SEO 元数据
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
   try {
     const page: any = await notion.pages.retrieve({ page_id: id });
+    const props = page.properties;
+    
+    const titleProp = props.Name || props.title;
+    const title = titleProp?.title?.[0]?.plain_text || "无标题文章";
+    
+    const categoryField = props.Category || props.category || props['分类'] || props['类别'];
+    const category = categoryField?.select?.name;
+    
+    const description = `阅读关于${category || '技术'}的文章：${title}`;
+    const canonicalUrl = `https://your-domain.com/post/${id}`;
+    
+    return generatePageSEO({
+      title,
+      description,
+      canonicalUrl,
+      publishedTime: page.created_time,
+      modifiedTime: page.last_edited_time,
+      keywords: category ? [category, 'C++', 'Programming'] : [],
+    });
+  } catch {
+    return generatePageSEO({
+      title: "文章加载失败",
+      description: "无法加载文章内容",
+    });
+  }
+}
+
+interface NotionPage {
+  id: string;
+  created_time: string;
+  last_edited_time?: string;
+  properties: {
+    Name?: { title: Array<{ plain_text: string }> };
+    title?: { title: Array<{ plain_text: string }> };
+    Category?: { select?: { name: string } };
+    category?: { select?: { name: string } };
+    Tags?: { multi_select?: Array<{ id: string; name: string }> };
+    tags?: { multi_select?: Array<{ id: string; name: string }> };
+    [key: string]: any;
+  };
+}
+
+async function getPostData(id: string) {
+  try {
+    const page = await notion.pages.retrieve({ page_id: id }) as any;
     const props = page.properties;
     
     const titleProp = props.Name || props.title;
@@ -50,17 +99,23 @@ async function getPostData(id: string) {
     const content = n2m.toMarkdownString(mdblocks).parent || "";
     
     return { title, date, content, category, tags };
-  } catch (error) {
+  } catch {
     return { title: "文章加载失败", date: "", content: "获取文章内容失败，请检查网络或配置。", category: null, tags: [] };
   }
 }
 
-function extractHeadings(mdString: string) {
+interface Heading {
+  level: number;
+  text: string;
+  id: string;
+}
+
+function extractHeadings(mdString: string): Heading[] {
   const regex = /^(##|###)\s+(.+)$/gm;
-  const headings = [];
-  let match;
+  const headings: Heading[] = [];
+  let match: RegExpExecArray | null;
   while ((match = regex.exec(mdString)) !== null) {
-    let cleanText = match[2].replace(/[*_~`]/g, '').trim(); 
+    const cleanText = match[2].replace(/[*_~`]/g, '').trim(); 
     headings.push({
       level: match[1].length, 
       text: cleanText,

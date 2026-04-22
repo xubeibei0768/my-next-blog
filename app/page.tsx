@@ -50,19 +50,19 @@ function Header() {
 
 function Bio() {
   return (
-    <div className="container max-w-7xl mx-auto px-4 sm:px-6 py-20 relative z-10">
-      <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-10">
-        <div className="size-24 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-4xl shrink-0">💻</div>
+    <div className="container max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20 relative z-10">
+      <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-8 lg:gap-10">
+        <div className="size-20 sm:size-24 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-3xl sm:text-4xl shrink-0">💻</div>
         <div className="flex-1">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900">Xubeibei's Dev Log</h1>
-          <p className="mt-4 text-lg text-gray-600 max-w-2xl leading-relaxed">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900">Xubeibei's Dev Log</h1>
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-gray-600 max-w-2xl leading-relaxed">
             Sensing the World // C++ & Algorithms.<br/>
             Sharing thoughts on intelligent perception, code, and life.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <span className="px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-xs font-mono text-gray-600">#C++</span>
-            <span className="px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-xs font-mono text-gray-600">#Algorithms</span>
-            <span className="px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-xs font-mono text-gray-600">#Perception</span>
+          <div className="mt-4 sm:mt-6 flex flex-wrap gap-2 sm:gap-3">
+            <span className="px-2.5 sm:px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-[10px] sm:text-xs font-mono text-gray-600">#C++</span>
+            <span className="px-2.5 sm:px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-[10px] sm:text-xs font-mono text-gray-600">#Algorithms</span>
+            <span className="px-2.5 sm:px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-[10px] sm:text-xs font-mono text-gray-600">#Perception</span>
           </div>
         </div>
       </div>
@@ -84,22 +84,22 @@ function PostCard({ post }: { post: any }) {
 
   return (
     <Link href={`/post/${post.id}`} className="block h-full">
-      <article className="group p-8 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between relative z-10">
+      <article className="group p-5 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between relative z-10">
         <div>
           {category && (
-            <span className="inline-block px-3 py-1 mb-4 rounded-full bg-blue-50 text-blue-600 text-[11px] font-bold tracking-wider uppercase">
+            <span className="inline-block px-2.5 sm:px-3 py-1 mb-3 sm:mb-4 rounded-full bg-blue-50 text-blue-600 text-[10px] sm:text-[11px] font-bold tracking-wider uppercase">
               {category}
             </span>
           )}
           
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
             {title}
           </h2>
           
           {tags.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-3 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2">
               {tags.map((tag: any) => (
-                <span key={tag.id} className="px-2 py-0.5 rounded bg-gray-50 border border-gray-100 text-gray-400 text-xs font-mono">
+                <span key={tag.id} className="px-1.5 sm:px-2 py-0.5 rounded bg-gray-50 border border-gray-100 text-gray-400 text-[10px] sm:text-xs font-mono">
                   #{tag.name}
                 </span>
               ))}
@@ -107,9 +107,9 @@ function PostCard({ post }: { post: any }) {
           )}
         </div>
 
-        <footer className="mt-10 flex items-center justify-between text-sm text-gray-400 font-mono">
+        <footer className="mt-8 sm:mt-10 flex items-center justify-between text-xs sm:text-sm text-gray-400 font-mono">
           <span>{date}</span>
-          <span className="font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0">阅读全文 →</span>
+          <span className="font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0 hidden sm:inline">阅读全文 →</span>
         </footer>
       </article>
     </Link>

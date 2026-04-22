@@ -1,0 +1,43 @@
+# 允许所有搜索引擎抓取
+User-agent: *
+Allow: /
+
+# 禁止抓取 API 路由和后台路径
+Disallow: /api/
+Disallow: /admin/
+Disallow: /_next/
+
+# 允许抓取静态资源
+Allow: /*.js$
+Allow: /*.css$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.webp$
+Allow: /*.svg$
+
+# 站点地图位置
+Sitemap: https://your-domain.com/sitemap.xml
+
+# 爬虫延迟（礼貌爬取）
+Crawl-delay: 1
+
+# Google 特定设置
+User-agent: Googlebot
+Allow: /
+# 支持 AMP（如果有）
+# Allow: /amp/
+
+# Bing 特定设置
+User-agent: Bingbot
+Allow: /
+
+# 禁止 AI 训练爬虫（可选）
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
